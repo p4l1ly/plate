@@ -1,9 +1,12 @@
 -- Functor, Foldable and Traversable in Haskell unfortunately work only with
--- the last type parameter. The following boilerplate defines MTFun, MTFol and
--- MTTra, which can specify fmaps, foldMaps and traversals over any type
--- parameter (or more type parameters at once). As a bonus, we can specify
--- distinct mapping/fold/traversal functions for eaach data constructor using
--- MFun, MFol, MTra.
+-- the last type parameter. The following boilerplate alternatively defines
+-- MTFun, MTFol and MTTra, which can specify fmaps, foldMaps and traversals
+-- over any type parameter (or more type parameters at once). As a bonus, we
+-- can specify distinct mapping/fold/traversal functions for each data
+-- constructor using MFun, MFol, MTra.
+
+-- As for the naming, MFun is an abbreviation of Multifunctor, MTFun is
+-- something like Multifunctor for type parameters.
 
 
 {-# LANGUAGE RankNTypes #-}
@@ -182,14 +185,24 @@ foos :: [Foo String Int]
 foos = [OpBs [1, 2, 3, 4], Val, OpAB "abc" 5, OpAA "d" "ef"]
 
 main = do
-  -- putStrLn the Strings and print the Ints
+  -- putStrLn the Strings and print the Ints, printed output:
+  -- 1
+  -- 2
+  -- 3
+  -- 4
+  -- abc
+  -- 5
+  -- d
+  -- ef
   appMTFol MTFol{mtfolA = putStrLn, mtfolB = print} `foldMap` foos
 
-  -- map Strings to their lengths
+  -- map Strings to their lengths, output:
+  -- [OpBs [1,2,3,4],Val,OpAB 3 5,OpAA 1 2]
   print$ appMTFun mtfun0{mtfunA = length} <$> foos
 
   -- more finegrained control (per data constructor):
   -- map Strings to their head or last elements, depending on the operand position
+  -- output: [OpBs [1,2,3,4],Val,OpAB 'a' 5,OpAA 'd' 'f']
   print$
     appMFun mfun0
       { mfunOpAB = \a b -> OpAB (head a) b
@@ -198,5 +211,6 @@ main = do
     <$> foos
 
   -- negate random Ints
+  -- output, e.g.: [OpBs [1,2,-3,-4],Val,OpAB "abc" (-5),OpAA "d" "ef"]
   let randomNegate x = getStdRandom (randomR (False, True)) <&> \case True -> -x; _ -> x
   print =<< (appMTTra mttra0{mttraB = randomNegate} `traverse` foos)
